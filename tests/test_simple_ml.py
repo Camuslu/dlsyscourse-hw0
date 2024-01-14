@@ -32,6 +32,7 @@ def submit_add():
 def test_parse_mnist():
     X,y = parse_mnist("data/train-images-idx3-ubyte.gz",
                       "data/train-labels-idx1-ubyte.gz")
+    print(X[:10])
     assert X.dtype == np.float32
     assert y.dtype == np.uint8
     assert X.shape == (60000,784)

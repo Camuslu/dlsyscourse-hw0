@@ -33,7 +33,75 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
      */
 
     /// BEGIN YOUR CODE
+    int steps = m / batch;
+    for (int step = 0; step < steps; step++) {
+        int start_idx_X = step * batch * n;
+        int start_idx_y = step * batch;
 
+        float X_copy[batch * n];
+        for (int i = 0; i < batch * n; i++) {
+          X_copy[i] = X[start_idx_X + i];
+        }
+        unsigned char y_copy[batch];
+        for (int i = 0; i < batch; i++) {
+          y_copy[i] = y[start_idx_y + i];
+        }
+        // logits = np.dot(X_batch, theta) # [b_size, class]
+        float logits[batch * k];
+        for (int i = 0; i < batch; i++) {
+            for (int k_idx = 0; k_idx < k; k_idx++) {
+                float logit = 0;
+                for (int j = 0; j < n; j++) {
+                    logit += X_copy[i*n + j] * theta[j*k + k_idx];
+                }
+                logits[i*k + k_idx] = logit;                
+            }
+        }
+        // normalizer = np.sum(np.exp(logits), axis=1)
+        float exp[batch * k];
+        for (int i = 0; i < batch; i++) {
+            for (int k_idx = 0; k_idx < k; k_idx++) {
+                exp[i*k+k_idx] = std::exp(logits[i*k+k_idx]);
+            }
+        }
+        float normalizer[batch];
+        for (int i = 0; i < batch; i++) {
+            float sum_ = 0.0;
+            for (int k_idx = 0; k_idx < k; k_idx++) {
+                sum_ += exp[i*k+k_idx];
+            }
+            normalizer[i] = sum_;
+        }
+        // prob = np.exp(logits) / normalizer[:, None] # [b_size, class]
+        float prob[batch * k];
+        for (int i = 0; i < batch; i++) {
+            for (int k_idx = 0; k_idx < k; k_idx++) {
+                prob[i*k+k_idx] = exp[i*k+k_idx] / normalizer[i];
+            }
+        } 
+        // one_hot_label = np.eye(classes)[y_batch] # [b_size, class]
+        // prob_minus_label = prob - one_hot_label 
+        // here we just modify the prob matrix in place
+        for (int i = 0; i < batch; i++) {
+            int label_idx = y_copy[i];
+            prob[i*k + label_idx] -= 1.0;
+        }
+        // gradient = np.dot(X_batch.transpose(), prob - one_hot_label) 
+        // gradient /= batch
+        float gradient[n * k];
+        for (int n_idx = 0; n_idx < n; n_idx++) {
+            for (int k_idx = 0; k_idx < k; k_idx++) {
+                float gradient_n_k = 0.0;
+                for (int i = 0; i < batch; i ++) {
+                    gradient_n_k += X_copy[i*n + n_idx] * prob[i*k + k_idx];
+                }
+                gradient_n_k = gradient_n_k / batch;
+                gradient[n_idx * k + k_idx] = gradient_n_k;
+                theta[n_idx * k + k_idx] -= lr * gradient_n_k;                
+            }
+        }
+
+    }
     /// END YOUR CODE
 }
 

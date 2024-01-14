@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y # this should be it
     ### END YOUR CODE
 
 
@@ -48,7 +48,16 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    with gzip.open(image_filename, 'rb') as f:
+        x_raw = np.frombuffer(f.read(), 'B', offset=16) # the magic number, num_image, num_row, num_col are the offset (4 * 4 bytes)
+    x_reshaped = x_raw.reshape(-1, 784).astype('float32')
+    x_reshaped = x_reshaped/255
+
+    with gzip.open(label_filename, 'rb') as f:
+        y_raw = np.frombuffer(f.read(), 'B', offset=8) # the magic number, num_image, num_row, num_col are the offset (4 * 4 bytes)
+    y_reshaped = y_raw.reshape(-1).astype('uint8')
+    print("tianhao debug", type(y_reshaped))
+    return x_reshaped, y_reshaped
     ### END YOUR CODE
 
 
@@ -68,7 +77,10 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    log_sum_exp = np.log(np.sum(np.exp(Z), axis = 1)).reshape(-1)
+    row_indices = np.arange(len(y))
+    Z_y = Z[row_indices, y].reshape(-1)
+    return np.average(log_sum_exp - Z_y)
     ### END YOUR CODE
 
 
@@ -91,7 +103,17 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    classes = num_classes = len(np.unique(y))
+    for step in range(X.shape[0]//batch):
+        X_batch = X[step * batch: (step+1) * batch, :] # size = [b_size, x_dim]
+        y_batch = y[step * batch: (step+1) * batch]
+        logits = np.dot(X_batch, theta) # [b_size, class]
+        normalizer = np.sum(np.exp(logits), axis=1)
+        prob = np.exp(logits) / normalizer[:, None] # [b_size, class]
+        one_hot_label = np.eye(classes)[y_batch] # [b_size, class]
+        gradient = np.dot(X_batch.transpose(), prob - one_hot_label) # [x_dim, class]
+        gradient /= batch
+        theta -= lr * gradient
     ### END YOUR CODE
 
 
@@ -118,9 +140,27 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    classes = num_classes = len(np.unique(y))
+    for step in range(X.shape[0]//batch):
+        X_batch = X[step * batch: (step+1) * batch, :] # size = [b_size, x_dim]
+        y_batch = y[step * batch: (step+1) * batch]        
+        Z1 = relu(np.dot(X_batch, W1)) # size = [b_size, hidden_dim]
+        logits = np.dot(Z1, W2) # size = [b_size, class]
+        normalizer = np.sum(np.exp(logits), axis=1)
+        prob = np.exp(logits) / normalizer[:, None] # [b_size, class]
+        one_hot_label = np.eye(classes)[y_batch] # [b_size, class]
+        G2 = prob - one_hot_label # [b_size, class]
+        G1 = (Z1 > 0) * np.dot(G2, W2.transpose()) # [b_size, hidden_dim]
+        gradient_W1 = np.dot(X_batch.transpose(), G1)
+        gradient_W1 /=  batch
+        gradient_W2 = np.dot(Z1.transpose(), G2)
+        gradient_W2 /=  batch 
+        W1 -= lr * gradient_W1
+        W2 -= lr * gradient_W2
     ### END YOUR CODE
 
+def relu(x):
+    return x * (x > 0)
 
 
 ### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT
